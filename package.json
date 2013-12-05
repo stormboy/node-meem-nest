@@ -1,0 +1,13 @@
+{
+  "name": "meem-nest",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "start": "node nest"
+  },
+  "dependencies": {
+  	"mqtt": "*",
+  	"unofficial-nest-api": "*",
+  	"whims": "git://github.com/stormboy/whims.git"
+  }
+}
