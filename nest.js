@@ -1,5 +1,9 @@
 "use strict";
 
+/**
+ * TODO use Meem API
+ */
+
 var util = require('util')
   , nest = require('unofficial-nest-api')
   , mqtt = require('mqtt')
