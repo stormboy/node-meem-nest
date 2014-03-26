@@ -1,9 +1,5 @@
 "use strict";
 
-/**
- * TODO use Meem API
- */
-
 var util = require('util')
   , nest = require('unofficial-nest-api')
   , mqtt = require('mqtt')
@@ -63,11 +59,11 @@ NestMeem.prototype._mqttSubscribe = function() {
 };
 
 NestMeem.prototype._sendCurrentTemperature = function(deviceId, deviceName, temp, timestamp) {
-	console.log("sending currentTemp: " + temp + " time: " + timestamp + " on " + this.tempTopic);
+	console.log(new Date() + " : sending currentTemp: " + temp + " time: " + timestamp + " on " + this.tempTopic);
 	timestamp = new Number(timestamp);
 	this._currentTemperature = {
 		value : temp,
-		unit : "C",
+		unit : "tempC",
 		timestamp : new Date(timestamp).toISOString()
 	};
 	this._mqttClient.publish(this.tempTopic, JSON.stringify(this._currentTemperature));
@@ -94,7 +90,7 @@ NestMeem.prototype._fetchNestStatus = function() {
 		for (var deviceId in data.device) {
 			if (data.device.hasOwnProperty(deviceId)) {
 				var device = data.shared[deviceId];
-				console.log(util.format("%s [%s], Current temperature = %d C target=%d", device.name, deviceId, device.current_temperature, device.target_temperature));
+				//console.log(util.format("%s [%s], Current temperature = %d C target=%d", device.name, deviceId, device.current_temperature, device.target_temperature));
 				self._sendCurrentTemperature(deviceId, device.name, device.current_temperature, device.$timestamp);
 			}
 		}
@@ -104,7 +100,7 @@ NestMeem.prototype._fetchNestStatus = function() {
 
 NestMeem.prototype._subscribeNest = function() {
 	var self = this;
-	console.log("Nest: subscribing to nest");
+	//console.log("Nest: subscribing to nest");
 	nest.subscribe(function(deviceId, data, type) {
 		self._subscribeNestDone(deviceId, data, type);
 	}, ['shared', 'energy_latest']);
@@ -114,15 +110,15 @@ NestMeem.prototype._subscribeNestDone = function(deviceId, data, type) {
 	var self = this;
 	// data if set, is also stored here: nest.lastStatus.shared[thermostatID]
 	if (deviceId) {
-		console.log('Nest: Device=' + deviceId + " type=" + type);
-		console.log("Nest data: " + JSON.stringify(data));
+		//console.log('Nest: Device=' + deviceId + " type=" + type);
+		//console.log("Nest data: " + JSON.stringify(data));
 		if (type == "shared") {
 			self._sendCurrentTemperature(deviceId, data.name, data.current_temperature, data.$timestamp);
 		} else if (type == "energy_latest") {
 			// do something
 		}
 	} else {
-		console.log('Nest: no data');
+		//console.log('Nest: no data');
 		var now = new Date().getTime();
 		if (now - self._lastUpdateTime > self._minStatusInterval) {
 			self._fetchNestStatus();
@@ -165,17 +161,17 @@ NestMeem.prototype._connectMqtt = function() {
 
 	mqttClient.on('message', function(topic, payload) {
 		// got data from subscribed topic
-		console.log('MQTT: message: ' + topic + ' : ' + payload);
+		//console.log('MQTT: message: ' + topic + ' : ' + payload);
 
 		// check if message is a request for current value, send response
 		var i = topic.indexOf("?");
 		if (i > 0) {// request for content
 			var requestTopic = topic.slice(0, i);
 			var responseTopic = payload;
-			console.log("MQTT: requestTopic: " + requestTopic + "  responseTopic: " + responseTopic);
+			//console.log("MQTT: requestTopic: " + requestTopic + "  responseTopic: " + responseTopic);
 
 			if (requestTopic == self.tempTopic) {
-				console.log("MQTT: sending content: " + self._currentTemperature + " on " + responseTopic);
+				//console.log("MQTT: sending content: " + self._currentTemperature + " on " + responseTopic);
 				mqttClient.publish(responseTopic, JSON.stringify(self._currentTemperature));
 			}
 		} else {// inbound message. handle
