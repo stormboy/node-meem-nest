@@ -7,7 +7,6 @@
   },
   "dependencies": {
   	"mqtt": "*",
-  	"unofficial-nest-api": "*",
-  	"whims": "git://github.com/stormboy/whims.git"
+  	"unofficial-nest-api": "*"
   }
 }

@@ -15,3 +15,10 @@ You need a settings.json file with content like:
         "password" : "mypassword"
 }
 ```
+
+## To Do
+
+Meemify with facets for
+- current temp (output)
+- current humidity (output)
+- temperature set-point (input)
