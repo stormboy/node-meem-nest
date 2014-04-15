@@ -119,11 +119,11 @@ NestMeem.prototype._subscribeNestDone = function(deviceId, data, type) {
 		}
 	} else {
 		//console.log('Nest: no data');
-		var now = new Date().getTime();
-		if (now - self._lastUpdateTime > self._minStatusInterval) {
-			self._fetchNestStatus();
-			return;
-		}
+//		var now = new Date().getTime();
+//		if (now - self._lastUpdateTime > self._minStatusInterval) {
+//			self._fetchNestStatus();
+//			return;
+//		}
 	}
 	if (self._running) {
 		setTimeout(function() {
