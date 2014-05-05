@@ -95,7 +95,10 @@ NestMeem.prototype._fetchNestStatus = function(doSubscribe) {
 			if (data.device.hasOwnProperty(deviceId)) {
 				var device = data.shared[deviceId];
 				//console.log(util.format("%s [%s], Current temperature = %d C target=%d", device.name, deviceId, device.current_temperature, device.target_temperature));
+				console.log("Device data: " + JSON.stringify(device));
 				self._sendCurrentTemperature(deviceId, device.name, device.current_temperature, device.$timestamp);
+				
+				//self._sendAwayStatus(device.auto_away);	// 0 = occupied, 1 = away
 			}
 		}
 		if (doSubscribe) {
@@ -109,7 +112,7 @@ NestMeem.prototype._subscribeNest = function() {
 	//console.log("Nest: subscribing to nest");
 	nest.subscribe(function(deviceId, data, type) {
 		self._subscribeNestDone(deviceId, data, type);
-	}, ['shared', 'energy_latest']);
+	}, ['shared', 'user', 'device', 'structure']);
 };
 
 NestMeem.prototype._subscribeNestDone = function(deviceId, data, type) {
@@ -117,11 +120,15 @@ NestMeem.prototype._subscribeNestDone = function(deviceId, data, type) {
 	// data if set, is also stored here: nest.lastStatus.shared[thermostatID]
 	if (deviceId) {
 		console.log('Nest: Device=' + deviceId + " type=" + type);
-		//console.log("Nest data: " + JSON.stringify(data));
+		console.log("Nest data: " + JSON.stringify(data));
 		if (type == "shared") {
 			self._sendCurrentTemperature(deviceId, data.name, data.current_temperature, data.$timestamp);
-		} else if (type == "energy_latest") {
+		}
+		else if (type == "energy_latest") {
 			// do something
+		}
+		else {
+			//console.log("Nest data: " + JSON.stringify(data));
 		}
 	} else {
 		var now = new Date().getTime();
