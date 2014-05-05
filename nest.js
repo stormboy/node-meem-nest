@@ -22,6 +22,7 @@ var NestMeem = module.exports = function(options) {
 	this._mqttClient = null;
 	this._lastUpdateTime = 0;
 	this._minStatusInterval = 300000;
+	
 };
 
 util.inherits(NestMeem, EventEmitter);
@@ -84,7 +85,10 @@ NestMeem.prototype._connectNest = function() {
 	});
 };
 
-NestMeem.prototype._fetchNestStatus = function() {
+NestMeem.prototype._fetchNestStatus = function(doSubscribe) {
+	if (doSubscribe === undefined) {
+		doSubscribe = true;
+	}
 	var self = this;
 	nest.fetchStatus(function(data) {
 		for (var deviceId in data.device) {
@@ -94,7 +98,9 @@ NestMeem.prototype._fetchNestStatus = function() {
 				self._sendCurrentTemperature(deviceId, device.name, device.current_temperature, device.$timestamp);
 			}
 		}
-		self._subscribeNest();
+		if (doSubscribe) {
+			self._subscribeNest();
+		}
 	});
 };
 
@@ -110,7 +116,7 @@ NestMeem.prototype._subscribeNestDone = function(deviceId, data, type) {
 	var self = this;
 	// data if set, is also stored here: nest.lastStatus.shared[thermostatID]
 	if (deviceId) {
-		//console.log('Nest: Device=' + deviceId + " type=" + type);
+		console.log('Nest: Device=' + deviceId + " type=" + type);
 		//console.log("Nest data: " + JSON.stringify(data));
 		if (type == "shared") {
 			self._sendCurrentTemperature(deviceId, data.name, data.current_temperature, data.$timestamp);
@@ -118,17 +124,20 @@ NestMeem.prototype._subscribeNestDone = function(deviceId, data, type) {
 			// do something
 		}
 	} else {
-		//console.log('Nest: no data');
-//		var now = new Date().getTime();
-//		if (now - self._lastUpdateTime > self._minStatusInterval) {
-//			self._fetchNestStatus();
-//			return;
-//		}
+		var now = new Date().getTime();
+		if (now - self._lastUpdateTime > self._minStatusInterval) {
+			//console.log('Nest: no data');
+			self._fetchNestStatus(false);
+			//return;
+		}
 	}
 	if (self._running) {
-		setTimeout(function() {
-			self._subscribeNest();
-		}, 10000);
+		if (!self._subscribeTimeout) {
+			self._subscribeTimeout = setTimeout(function() {
+				delete self._subscribeTimeout;
+				self._subscribeNest();
+			}, 10000);
+		}
 	}
 };
 
