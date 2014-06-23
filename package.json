@@ -7,6 +7,6 @@
   },
   "dependencies": {
   	"mqtt": "*",
-  	"unofficial-nest-api": "git://github.com/TheThingSystem/unofficial_nodejs_nest.git"
+  	"unofficial-nest-api": "git://github.com/ninjablocks/unofficial_nodejs_nest.git"
   }
 }

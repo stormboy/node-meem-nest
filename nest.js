@@ -57,9 +57,12 @@ NestMeem.prototype.setDeviceName = function(name) {
 	}
 
 	this.tempOutTopic              = this.meemTopic + "/" + name + "/currentTemperature";
-	this.targetTemperatureOutTopic = this.meemTopic + "/" + name + "/out/targetTemperature"	// monitor setpoint
-	this.targetTemperatureInTopic  = this.meemTopic + "/" + name + "/in/targetTemperature"	// control setpoint
-	
+	this.targetTemperatureOutTopic = this.meemTopic + "/" + name + "/out/targetTemperature";	// monitor setpoint
+	this.targetTemperatureInTopic  = this.meemTopic + "/" + name + "/in/targetTemperature";	// control setpoint
+	this.awayOutTopic              = this.meemTopic + "/" + name + "/out/away";
+	this.awayInTopic               = this.meemTopic + "/" + name + "/in/away";
+	this.onOffOutTopic             = this.meemTopic + "/" + name + "/out/onOff"
+	this.onOffInTopic              = this.meemTopic + "/" + name + "/in/onOff"
 	//this.modeTopic = this.meemTopic + "/" + name + "/mode";
 
 	if (this._mqttClient) {
@@ -79,8 +82,17 @@ NestMeem.prototype._mqttSubscribe = function() {
 	}
 };
 
+NestMeem.prototype._handleOnOff = function(value) {
+	// TODO send to Nest service
+	console.log("Nest: TODO implement turning device on/off");
+}
+NestMeem.prototype._handleAway = function(value) {
+	// TODO send to Nest service
+	console.log("Nest: TODO implement setting away mode");
+}
 NestMeem.prototype._handleTargetTemperature = function(value) {
 	// TODO send to Nest service
+	console.log("Nest: TODO implement setting target temperature");
 }
 
 NestMeem.prototype._sendCurrentTemperature = function(deviceId, deviceName, temp, timestamp) {
@@ -157,26 +169,39 @@ NestMeem.prototype._subscribeNestDone = function(deviceId, data, type) {
 	self._waitingForNest = false;
 	// data if set, is also stored here: nest.lastStatus.shared[thermostatID]
 	if (deviceId) {
-		// current_schedule_mode
-		console.log('Nest: Device=' + deviceId + " type=" + type);
-		console.log("Nest data: " + JSON.stringify(data));
+		if (TRACE) {
+			console.log('Nest: Device=' + deviceId + " type=" + type);
+			console.log("Nest data: " + JSON.stringify(data));
+		}
 
-		if (type == "shared") {
+		switch(type) {
+		case "shared":
 			self._sendCurrentTemperature(deviceId, data.name, data.current_temperature, data.$timestamp);
-			self._sendTargetTemperature(deviceId, device.name, device.target_temperature, device.$timestamp);
-		}
-		else if (type == "energy_latest") {
-			// do something
-		}
-		else {
+			self._sendTargetTemperature(deviceId, data.name, data.target_temperature, data.$timestamp);
+			break;
+		case "structure":		// info on "structure" or dwelling
+			console.log("Nest: dwelling: " + data.name + " away: " + data.away);
+			// TODO send away status
+			//self._sendAwayStatus(deviceId, data.name, data.away, data.$timestamp);
+			break;
+		case "device":			// device details
+			// TODO
+			// .temperature_scale   "C"
+			// ."current_humidity":  58
+			break;
+		case "energy_latest":
+			// TODO do something
+			break;
+		default:
 			//console.log("Nest data: " + JSON.stringify(data));
 		}
+
 		if (self._running) {
-			// subscribe, but not immediatey
+			// re-subscribe, but not immediatey
 			self._subscribeTimeout = setTimeout(function() {
 				delete self._subscribeTimeout;
 				self._subscribeNest();
-			}, 10000);
+			}, 100);
 		}
 	}
 	else {
@@ -228,7 +253,7 @@ NestMeem.prototype._connectMqtt = function() {
 			//console.log("MQTT: requestTopic: " + requestTopic + "  responseTopic: " + responseTopic);
 
 			switch (requestTopic) {
-			case self.tempOutTopic):
+			case self.tempOutTopic:
 				//console.log("MQTT: sending content: " + self._currentTemperature + " on " + responseTopic);
 				mqttClient.publish(responseTopic, JSON.stringify(self._currentTemperature));
 				break;
@@ -238,11 +263,23 @@ NestMeem.prototype._connectMqtt = function() {
 			default:
 				// ???
 			}
-		} else {// inbound message. handle
-			// TODO handle in topics
-			if (packet.topic == self.targetTemperatureInTopic) {
+		}
+		else {	// handle topics for inbound messages
+			switch(topic) {
+			case self.targetTemperatureInTopic:
 				var message = JSON.parse(payload);
 				self._handleTargetTemperature(message.value);
+				break;
+			case self.awayInTopic:
+				var message = JSON.parse(payload);
+				self._handleAway(message.value);
+				break;
+			case self.onOffInTopic:
+				var message = JSON.parse(payload);
+				self._handleOnOff(message.value);
+				break;
+			default:
+				//??
 			}
 		}
 	});
