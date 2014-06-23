@@ -180,14 +180,6 @@ NestMeem.prototype._subscribeNestDone = function(deviceId, data, type) {
 			self._fetchNestStatus();
 		}
 	}
-	else {
-		// no data, error from  nest call
-		var now = new Date().getTime();
-		if (now - self._lastUpdateTime > self._minStatusInterval) {
-			//console.log('Nest: no data');
-			self._fetchNestStatus();
-		}
-	}
 };
 
 NestMeem.prototype._connectMqtt = function() {
