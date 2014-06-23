@@ -15,11 +15,8 @@ var NestMeem = module.exports = function(options) {
 	this._options = options;
 	this._currentTemperature = {};
 	
-	this.deviceName = "Home";
-	this.nestTopic = "/house/thermostat";
-	this.tempTopic = this.nestTopic + "/" + this.deviceName + "/currentTemperature";
-	this.targetTemperatureOutTopic = this.nestTopic + "/" + this.deviceName + "out/tempSetpoint"	// monitor setpoint
-	this.targetTemperatureInTopic  = this.nestTopic + "/" + this.deviceName + "in/tempSetpoint"	// control setpoint
+	this.meemTopic = "/house/thermostat";
+	this.setDeviceName("Home");
 	
 	this._mqttClient = null;
 	this._lastUpdateTime = 0;
@@ -53,15 +50,19 @@ NestMeem.prototype.close = function() {
 NestMeem.prototype.setDeviceName = function(name) {
 	this.deviceName = name;
 	
-	// TODO unsubscribe to any previous subscriptons
+	if (this._mqttClient) {
+		//this._mqttUnsubscribe();		// TODO unsubscribe to any previous subscriptons
+	}
 
-	this.tempTopic = this.nestTopic + "/" + this.deviceName + "/currentTemperature";
-	this.targetTemperatureOutTopic = this.nestTopic + "/" + this.deviceName + "out/tempSetpoint"	// monitor setpoint
-	this.targetTemperatureInTopic  = this.nestTopic + "/" + this.deviceName + "in/tempSetpoint"	// control setpoint
+	this.tempOutTopic              = this.meemTopic + "/" + name + "/currentTemperature";
+	this.targetTemperatureOutTopic = this.meemTopic + "/" + name + "/out/targetTemperature"	// monitor setpoint
+	this.targetTemperatureInTopic  = this.meemTopic + "/" + name + "/in/targetTemperature"	// control setpoint
 	
-	//this.modeTopic = this.nestTopic + "/" + name + "/mode";
+	//this.modeTopic = this.meemTopic + "/" + name + "/mode";
 
-	//this._mqttSubscribe();
+	if (this._mqttClient) {
+		this._mqttSubscribe();
+	}
 };
 
 NestMeem.prototype._mqttSubscribe = function() {
@@ -71,7 +72,7 @@ NestMeem.prototype._mqttSubscribe = function() {
 		//this.mqttClient.subscribe(this.modeInTopic);
 
 		// subscribe to content request topics
-		this._mqttClient.subscribe(this.tempTopic + "?");
+		this._mqttClient.subscribe(this.tempOutTopic + "?");
 		this._mqttClient.subscribe(this.targetTemperatureOutTopic + "?");
 	}
 };
@@ -81,14 +82,14 @@ NestMeem.prototype._handleTargetTemperature = function(value) {
 }
 
 NestMeem.prototype._sendCurrentTemperature = function(deviceId, deviceName, temp, timestamp) {
-	console.log(new Date() + " : sending currentTemp: " + temp + " time: " + timestamp + " on " + this.tempTopic);
+	console.log(new Date() + " : sending currentTemp: " + temp + " time: " + timestamp + " on " + this.tempOutTopic);
 	timestamp = new Number(timestamp);
 	this._currentTemperature = {
 		value : temp,
 		unit : "tempC",
 		timestamp : new Date(timestamp).toISOString()
 	};
-	this._mqttClient.publish(this.tempTopic, JSON.stringify(this._currentTemperature));
+	this._mqttClient.publish(this.tempOutTopic, JSON.stringify(this._currentTemperature));
 	this._lastUpdateTime = new Date().getTime();
 };
 
@@ -222,7 +223,7 @@ NestMeem.prototype._connectMqtt = function() {
 			var responseTopic = payload;
 			//console.log("MQTT: requestTopic: " + requestTopic + "  responseTopic: " + responseTopic);
 
-			if (requestTopic == self.tempTopic) {
+			if (requestTopic == self.tempOutTopic) {
 				//console.log("MQTT: sending content: " + self._currentTemperature + " on " + responseTopic);
 				mqttClient.publish(responseTopic, JSON.stringify(self._currentTemperature));
 			}
