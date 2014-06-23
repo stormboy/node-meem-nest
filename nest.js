@@ -66,7 +66,9 @@ NestMeem.prototype.setDeviceName = function(name) {
 
 NestMeem.prototype._mqttSubscribe = function() {
 	if (this._connected) {
-		this.mqttClient.subscribe({topic: self.targetTemperatureInTopic});
+		// input topics
+		this.mqttClient.subscribe(this.targetTemperatureInTopic);
+		//this.mqttClient.subscribe(this.modeInTopic);
 
 		// subscribe to content request topics
 		this._mqttClient.subscribe(this.tempTopic + "?");
