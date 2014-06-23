@@ -28,12 +28,22 @@ var NestMeem = module.exports = function(options) {
 util.inherits(NestMeem, EventEmitter);
 
 NestMeem.prototype.start = function() {
+	var self = this;
 	this._running = true;
+	this._waitingForNest = false;	// waiting for subscription to nest event to return 
 	this._connectNest();
 	this._connectMqtt();
+	this._monitor = setInterval(function() {
+		var now = new Date().getTime();
+		if (now - self._lastUpdateTime > self._minStatusInterval) {
+			self._waitingForNest = false;
+			self._fetchNestStatus();
+		}
+	}, 60000);
 };
 
 NestMeem.prototype.close = function() {
+	clearInterval(this._monitor);
 	this._running = false;
 	this._mqttClient.end();
 };
@@ -85,10 +95,7 @@ NestMeem.prototype._connectNest = function() {
 	});
 };
 
-NestMeem.prototype._fetchNestStatus = function(doSubscribe) {
-	if (doSubscribe === undefined) {
-		doSubscribe = true;
-	}
+NestMeem.prototype._fetchNestStatus = function() {
 	var self = this;
 	nest.fetchStatus(function(data) {
 		for (var deviceId in data.device) {
@@ -97,17 +104,18 @@ NestMeem.prototype._fetchNestStatus = function(doSubscribe) {
 				//console.log(util.format("%s [%s], Current temperature = %d C target=%d", device.name, deviceId, device.current_temperature, device.target_temperature));
 				console.log("Device data: " + JSON.stringify(device));
 				self._sendCurrentTemperature(deviceId, device.name, device.current_temperature, device.$timestamp);
-				
 				//self._sendAwayStatus(device.auto_away);	// 0 = occupied, 1 = away
 			}
 		}
-		if (doSubscribe) {
-			self._subscribeNest();
-		}
+		self._subscribeNest();
 	});
 };
 
 NestMeem.prototype._subscribeNest = function() {
+	if (this._waitingForNest) {
+		console.log("already waiting for nest. cancel subscription");
+		returnl
+	}
 	var self = this;
 	//console.log("Nest: subscribing to nest");
 	nest.subscribe(function(deviceId, data, type) {
@@ -117,6 +125,7 @@ NestMeem.prototype._subscribeNest = function() {
 
 NestMeem.prototype._subscribeNestDone = function(deviceId, data, type) {
 	var self = this;
+	self._waitingForNest = false;
 	// data if set, is also stored here: nest.lastStatus.shared[thermostatID]
 	if (deviceId) {
 		console.log('Nest: Device=' + deviceId + " type=" + type);
@@ -130,20 +139,20 @@ NestMeem.prototype._subscribeNestDone = function(deviceId, data, type) {
 		else {
 			//console.log("Nest data: " + JSON.stringify(data));
 		}
-	} else {
-		var now = new Date().getTime();
-		if (now - self._lastUpdateTime > self._minStatusInterval) {
-			//console.log('Nest: no data');
-			self._fetchNestStatus(false);
-			//return;
-		}
-	}
-	if (self._running) {
-		if (!self._subscribeTimeout) {
+		if (self._running) {
+			// subscribe, but not immediatey
 			self._subscribeTimeout = setTimeout(function() {
 				delete self._subscribeTimeout;
 				self._subscribeNest();
 			}, 10000);
+		}
+	}
+	else {
+		// no data, error from  nest call
+		var now = new Date().getTime();
+		if (now - self._lastUpdateTime > self._minStatusInterval) {
+			//console.log('Nest: no data');
+			self._fetchNestStatus();
 		}
 	}
 };
