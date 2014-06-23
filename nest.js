@@ -6,6 +6,8 @@ var util = require('util')
   , EventEmitter = require('events').EventEmitter
   , crypto = require('crypto');
 
+var TRACE = true;
+
 /**
  * TODO allow control: set-point, away mode
  */
@@ -142,7 +144,9 @@ NestMeem.prototype._subscribeNest = function() {
 		return;
 	}
 	var self = this;
-	//console.log("Nest: subscribing to nest");
+	if (TRACE) {
+		console.log("Nest: subscribing to nest");
+	}
 	nest.subscribe(function(deviceId, data, type) {
 		self._subscribeNestDone(deviceId, data, type);
 	}, ['shared', 'user', 'device', 'structure']);
@@ -223,12 +227,16 @@ NestMeem.prototype._connectMqtt = function() {
 			var responseTopic = payload;
 			//console.log("MQTT: requestTopic: " + requestTopic + "  responseTopic: " + responseTopic);
 
-			if (requestTopic == self.tempOutTopic) {
+			switch (requestTopic) {
+			case self.tempOutTopic):
 				//console.log("MQTT: sending content: " + self._currentTemperature + " on " + responseTopic);
 				mqttClient.publish(responseTopic, JSON.stringify(self._currentTemperature));
-			}
-			if (requestTopic == self.targetTemperatureOutTopic) {
+				break;
+			case self.targetTemperatureOutTopic:
 				mqttClient.publish(responseTopic, JSON.stringify(self._targetTemperature));
+				break;
+			default:
+				// ???
 			}
 		} else {// inbound message. handle
 			// TODO handle in topics
